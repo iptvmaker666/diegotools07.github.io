@@ -18,9 +18,9 @@ modulator="index_$RANDOM.wav"
 autotuned="at_$RANDOM.wav"
 SECONDS=0
 
-ffmpeg -loglevel error -i $FILE_1 -vn -ac 1 -f wav $modulator || { echo "An error has occurred, exiting command! (Modulator error)"; exit 1; }
-ffmpeg -loglevel error -stream_loop -1 -i $FILE_2 -vn -ac 1 -ar "$hz" -t $duration -f wav $carrier || { echo "An error has occurred, exiting command! (Carrier error)"; exit 1; }
-wine cmd &>/dev/null && wine autotune.exe -q -b 75 $modulator $carrier ./output/$autotuned || { echo "An error has occurred, exiting command! (Autotune error)"; exit 1; }
+ffmpeg -loglevel error -i $FILE_1 -vn -ac 1 -f wav $modulator || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; }
+ffmpeg -loglevel error -stream_loop -1 -i $FILE_2 -vn -ac 1 -ar "$hz" -t $duration -f wav $carrier || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; }
+wine cmd &>/dev/null && wine autotune.exe -q -b 75 $modulator $carrier ./output/$autotuned || { echo ":warning: An error has occurred, exiting command! (Autotune error)"; exit 1; }
 cd output
 ls -lh |& tee -a
 echo "-# Command took ${SECONDS}s"}{mscriptmaybeurl:load {or:{av}|{av:0}} m
@@ -46,34 +46,34 @@ rate="$hz"
   if (( rate == 48000 )); then
 
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -f wav "$modulator" \
-      2> $log || { echo "An error has occurred, exiting command! (Modulator error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
     ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
-      2> $log || { echo "An error has occurred, exiting command! (Carrier error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   elif (( rate > 48000 )); then
 
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -ar 48000 -f wav "$modulator" \
-      2> $log || { echo "An error has occurred, exiting command! (Modulator error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
     ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar 48000 -t "$duration" -f wav "$carrier" \
-      2> $log || { echo "An error has occurred, exiting command! (Carrier error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   else # rate < 48000
 
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -f wav "$modulator" \
-      2> $log || { echo "An error has occurred, exiting command! (Modulator error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
     ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
-      2> $log || { echo "An error has occurred, exiting command! (Carrier error)"; exit 1; } 
+      2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   fi
 
   wine cmd &>/dev/null && wine "$FILE_3" -q -b 75 "$modulator" "$carrier" "$autotuned" \
-    2> $log || { echo "An error has occurred, exiting command! (Autotune error)"; exit 1; } 
+    2> $log || { echo ":warning: An error has occurred, exiting command! (Autotune error)"; exit 1; } 
 
   ffmpeg -loglevel error -i "$FILE_1" -stream_loop -1 -i "$autotuned" -map 0:v? -map 1 -shortest "$out" \
-    2> $log || { echo "An error has occurred, exiting command! (Processing error)"; exit 1; } 
+    2> $log || { echo ":warning: An error has occurred, exiting command! (Processing error)"; exit 1; } 
 
   SIZE=$(stat -c%s "$out" || echo 0)
   cat $log

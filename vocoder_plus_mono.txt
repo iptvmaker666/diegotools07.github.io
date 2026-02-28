@@ -1,0 +1,211 @@
+# Use "old" in the arg 1 if you want to use the old version, use "v3" in the arg 1 if you want to use the arss version, and "v4" to use the python vocoder version
+-# Log:
+{set:u|{unix}}
+{if:{arg}|=|old|then:{sh:load {av}
+load {if:{arg:1}|=|youtube|then:{search.youtube:{ARGS:2}}|else:{arg:1}}
+
+d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
+hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
+
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]volume=2,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=magnitude[mod];[1]aresample=$hz,volume=2,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=magnitude[carrier];[mod]boxblur=1.5:2[f0];[carrier]hue=s=-1[f1];[f0][f1]blend=all_mode=freeze,eq=brightness=-0.1" -an -c:v rawvideo -shortest vocmag.nut |& tee -a
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=phase[mod];[1]aresample=$hz,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=lin:overlap=0.985:color=channel:slide=fullframe:data=phase[carrier];[mod]boxblur=1.5:2[f0];[carrier]hue=s=-1[f1];[f0][f1]blend=all_mode=multiply,eq=brightness=-0.15" -an -c:v rawvideo -shortest vocphase.nut |& tee -a
+ffmpeg -loglevel error -i vocmag.nut -i vocphase.nut -lavfi spectrumsynth=channels=1:"sample_rate=$hz":win_func=nuttall:overlap=0.985:slide=fullframe vocoded.mp3 |& tee -a
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i vocoded.mp3 -map 0:v? -map 1 -shortest ./output/$(basename $FILE_1) |& tee -a
+cd output
+ls -d |& tee -a}|else:{if:{arg}|=|v3|then:{sh:load {av}
+load {if:{arg:1}|=|youtube|then:{search.youtube:{ARG:2}}|else:{arg:1}}
+load https://github.com/Beebo72/arrs_files_build/raw/refs/heads/main/arss.exe
+load https://github.com/Beebo72/arrs_files_build/raw/refs/heads/main/fftw3.dll
+
+d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
+hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
+carrier="c_$RANDOM.wav"
+modulator="m_$RANDOM.wav"
+namecarrier="carrier_$RANDOM.bmp"
+namemodulator="modulator_$RANDOM.bmp"
+namevoc="vocoded_$RANDOM.bmp"
+final="final_$RANDOM.wav"
+
+ffmpeg -loglevel error -stream_loop -1 -y -i $FILE_2 -ar $hz -t $d -bitexact -map_metadata -1 $carrier |& tee -a
+ffmpeg -loglevel error -y -i $FILE_1 -bitexact -map_metadata -1 $modulator |& tee -a 
+wine cmd &>/dev/null && wine $FILE_3 $carrier $namecarrier --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q |& tee -a 
+wine cmd &>/dev/null && wine $FILE_3 $modulator $namemodulator --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q |& tee -a 
+magick $namecarrier $namemodulator -compose bumpmap -composite $namevoc |& tee -a
+wine cmd &>/dev/null && wine $FILE_3 $namevoc $final -s --min-freq 30 -max 20000 --pps 100 -r $hz -f 16 -g 25 -q |& tee -a
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $final -af volume=2 -map 0:v:? -map 1 -shortest ./output/v3_$(basename $FILE_1) |& tee -a
+cd output
+ls -d |& tee -a}|else:{if:{arg}|=|v4|then:{py:load {av}
+load {if:{arg:1}|=|youtube|then:{search.youtube:{arg:2}}|else:{arg:1}}
+
+import numpy as np
+from scipy.signal import butter, lfilter, resample_poly
+from scipy.io.wavfile import read, write
+import subprocess, os, time, random, sys
+
+video_modulator = os.getenv('FILE_1')
+video_carrier = os.getenv('FILE_2')
+
+def detect_ext(p):
+    base = os.path.basename(p)
+    _, ext = os.path.splitext(base)
+    if ext:
+        return ext.lower()
+    try:
+        fmt = subprocess.check_output(
+            ['ffprobe','-v','error','-show_entries','format=format_name','-of','default=noprint_wrappers=1:nokey=1', p]
+        ).decode().strip()
+        
+        if 'mp4' in fmt:
+            return '.mp4'
+        if 'mov' in fmt:
+            return '.mov'
+        if 'matroska' in fmt or 'webm' in fmt or 'mkv' in fmt:
+            return '.mkv'
+        if 'avi' in fmt:
+            return '.avi'
+    except Exception:
+        pass
+    return '.mp4'  
+ 
+num = int(time.time()*1000) ^ random.randint(0, 1_000_000)
+ext = detect_ext(video_modulator) or '.mp4'
+ 
+result = subprocess.run( 
+ ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+     "-of", "default=noprint_wrappers=1:nokey=1", video_modulator],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+)
+ 
+duration = result.stdout.strip()
+ 
+if not video_modulator:
+    print("Input 1 not set", file=sys.stderr)
+    sys.exit(1)
+    
+wav_modulator = f'./modulator_{num}.wav'
+wav_carrier = f'./carrier_{num}.wav'
+
+vocoder_wav = f'./vocoder_final_{num}.wav'
+video_output = f'./output/video_vocoder_{num}{ext}'
+
+def extract_audio(video_path, wav_path):
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-loglevel", "error",
+        "-i", video_path,
+        "-t", duration,
+        wav_path
+], check=True)
+
+print("Extracting audio (1/2)...")
+extract_audio(video_modulator, wav_modulator)
+
+print("Extracting audio (2/2)...")
+extract_audio(video_carrier, wav_carrier)
+
+
+def to_float32(audio):
+    if np.issubdtype(audio.dtype, np.floating):
+        return audio.astype(np.float32)
+    max_val = np.iinfo(audio.dtype).max
+    return audio.astype(np.float32) / max_val
+
+
+def bandpass_filter(data, lowcut, highcut, fs, order=3):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = min(highcut / nyq, 0.99)
+    b, a = butter(order, [low, high], btype='band')
+    return lfilter(b, a, data)
+
+
+def repeat_to_length(signal, target_len):
+    reps = int(np.ceil(target_len / len(signal)))
+    signal = np.tile(signal, reps)
+    return signal[:target_len]
+
+
+fs_mod, modulator = read(wav_modulator)
+fs_car, carrier = read(wav_carrier)
+
+modulator = to_float32(modulator)
+carrier = to_float32(carrier)
+
+if modulator.ndim > 1:
+    modulator = modulator[:, 0]
+if carrier.ndim > 1:
+    carrier = carrier[:, 0]
+
+fs = fs_mod
+
+if fs_car != fs:
+    print(f"Changing carrier sample rate from {fs_car} Hz to {fs} Hz")
+    gcd = np.gcd(fs_car, fs)
+    carrier = resample_poly(carrier, fs // gcd, fs_car // gcd)
+
+carrier = repeat_to_length(carrier, len(modulator))
+
+num_bands = 12
+low_freq = 100
+high_freq = 10000
+
+freqs = np.logspace(
+    np.log10(low_freq),
+    np.log10(high_freq),
+    num_bands + 1
+)
+
+output = np.zeros_like(modulator)
+
+for i in range(num_bands):
+    f_low = freqs[i]
+    f_high = freqs[i + 1]
+
+    mod_band = bandpass_filter(modulator, f_low, f_high, fs)
+    car_band = bandpass_filter(carrier, f_low, f_high, fs)
+
+    envelope = np.abs(mod_band)
+
+    b_env, a_env = butter(2, 15 / (0.5 * fs), btype='low')
+    envelope = lfilter(b_env, a_env, envelope)
+
+    if np.max(envelope) > 0:
+        envelope /= np.max(envelope)
+
+    output += car_band * envelope * 3.0
+
+if np.max(np.abs(output)) > 0:
+    output = output / np.max(np.abs(output)) * 0.9
+
+write(
+    vocoder_wav,
+    fs,
+    (output * 32767).astype(np.int16)
+)
+
+  print("🎬 Vocoder generated!")
+
+  print("🎬 Replacing audio of the video...")
+
+subprocess.run([
+    "ffmpeg", "-y",
+    "-loglevel", "error",
+    "-i", video_modulator,
+    "-stream_loop", "-1",
+    "-i", vocoder_wav,
+    "-map", "0:v:?",
+    "-map", "1",
+    "-shortest",
+    video_output
+], check=True)
+
+print("✅ Video Created!")}|else:{sh:load {av}
+load {if:{arg}|=|youtube|then:{search.youtube:{ARG:1}}|else:{arg}}
+
+hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
+d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
+
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0:a]volume=0.05,highpass=1000,acrusher=bits=32:samples=1[mod];[1:a]aresample=176400,volume=0.5[carr];[mod][carr]anlms=out_mode=e:order=3200:mu=0.01:leakage=0.005:eps=0.05:precision=double[voc];[voc]volume=75,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16[a]" -map 0:v:? -map "[a]" -ar "$hz" -shortest ./output/$(basename $FILE_1) |& tee -a
+cd output
+ls -d |& tee -a}}}}
+-# Vocoder Command Execution Took {math:({unix}-{get:u})/1000} Seconds.

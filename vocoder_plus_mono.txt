@@ -183,8 +183,8 @@ write(
     (output * 32767).astype(np.int16)
 )
 
-  print("🎬 Vocoder generated!")
-  print("🎬 Replacing audio of the video...")
+print("🎬 Vocoder generated!")
+print("🎬 Replacing audio of the video...")
 
 subprocess.run([
     "ffmpeg", "-y",

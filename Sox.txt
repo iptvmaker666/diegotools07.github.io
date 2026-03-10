@@ -1,0 +1,31 @@
+# USE ALT IN THE ARG 1 IF YOU WANT TO EDIT ONLY AUDIO
+- USE ISCRIPT IN THE ARG 1 IF THE FILE CAN'T BE DOWNLOADED/READED
+-# Error log:
+{set:u|{Unix}}{set:digits_1|sox_{range:1234|4321}}{if:{arg}|=|alt|then:{eval:{sh:load {iscripturl:load {av} #
+convert # audio/mp3
+render #}
+
+
+sox -q $FILE_1 ./output/{get:digits_1}_$RANDOM_$(basename $FILE_1) {args:1} |& tee -a
+cd output
+ls -lh |& tee -a}}|else:{if:{arg}|=|iscript|then:{eval:{sh:load {iscripturl:load {av} #
+convert # audio/mp3
+render #}
+
+
+sox -q $FILE_1 ./output/{get:digits_1}_$RANDOM_$(basename $FILE_1) {args:1} |& tee -a
+cd output
+ls -lh |& tee -a}
+{mscriptmaybeurl:load {av} m
+load FILE_1 a
+repeatduration a md
+audioputreplace m a true
+render m}}|else:{eval:{sh:load {av}
+d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
+
+ffmpeg -loglevel error -y -i $FILE_1 -f mp3 output_{get:digits_1}.mp3 |& tee -a
+sox output_{get:digits_1}.mp3 {get:digits_1}.mp3 {args} |& tee -a
+ffmpeg -loglevel error -y -i $FILE_1 -stream_loop -1 -i {get:digits_1}.mp3 -map 0:v:? -map 1 -shortest ./output/$(basename $FILE_1) |& tee -a
+cd output
+ls -lh |& tee -a}}}}
+-# Tiempo Procesado/Time Processed: {math:({Unix}-{get:u})/1000} segundos/seconds.

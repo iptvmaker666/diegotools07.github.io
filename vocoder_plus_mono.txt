@@ -9,6 +9,7 @@ hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
 magnitude_nut=vocmag_$RANDOM.nut
 phase_nut=vocphase_$RANDOM.nut
 voc=voc_$RANDOM.mp3
+log=log_$RANDOM.log
 
 ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]volume=2,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=magnitude[mod];[1]aresample=$hz,volume=2,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=magnitude[carrier];[mod]boxblur=1.5:2[f0];[carrier]hue=s=-1[f1];[f0][f1]blend=all_mode=freeze,eq=brightness=-0.1" -an -c:v rawvideo -shortest $magnitude_nut 2> $log
 ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]aformat=channel_layouts=mono,showspectrum=mode=separate:scale=log:overlap=0.985:color=channel:slide=fullframe:data=phase[mod];[1]aresample=$hz,aformat=channel_layouts=mono,showspectrum=mode=separate:scale=lin:overlap=0.985:color=channel:slide=fullframe:data=phase[carrier];[mod]boxblur=1.5:2[f0];[carrier]hue=s=-1[f1];[f0][f1]blend=all_mode=multiply,eq=brightness=-0.15" -an -c:v rawvideo -shortest $phase_nut 2> $log

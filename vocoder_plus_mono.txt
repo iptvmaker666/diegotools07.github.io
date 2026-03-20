@@ -72,19 +72,19 @@ def detect_ext(p):
  
 num = int(time.time()*1000) ^ random.randint(0, 1_000_000)
 ext = detect_ext(video_modulator) or '.mp4'
- 
-result = subprocess.run( 
- ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+
+result = subprocess.run(
+    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
      "-of", "default=noprint_wrappers=1:nokey=1", video_modulator],
     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
 )
- 
+
 duration = result.stdout.strip()
- 
+
 if not video_modulator:
     print("Input 1 not set", file=sys.stderr)
     sys.exit(1)
-    
+
 wav_modulator = f'./modulator_{num}.wav'
 wav_carrier = f'./carrier_{num}.wav'
 
@@ -98,12 +98,12 @@ def extract_audio(video_path, wav_path):
         "-i", video_path,
         "-t", duration,
         wav_path
-], check=True)
+    ], check=True)
 
-print("Extracting audio (1/2)...")
+print("🎬 Extracting audio (1/2)...")
 extract_audio(video_modulator, wav_modulator)
 
-print("Extracting audio (2/2)...")
+print("🎬 Extracting audio (2/2)...")
 extract_audio(video_carrier, wav_carrier)
 
 
@@ -124,8 +124,65 @@ def bandpass_filter(data, lowcut, highcut, fs, order=3):
 
 def repeat_to_length(signal, target_len):
     reps = int(np.ceil(target_len / len(signal)))
-    signal = np.tile(signal, reps)
+    signal = np.tile(signal, (reps, 1)) if signal.ndim > 1 else np.tile(signal, reps)
     return signal[:target_len]
+
+
+def match_channels(mod, car):
+
+    if car.ndim == 1:
+
+        if mod.ndim > 1:
+            mod = np.mean(mod, axis=1)
+    else:
+
+        if mod.ndim == 1:
+            mod = np.stack([mod, mod], axis=1)
+        elif mod.shape[1] != car.shape[1]:
+            mod = np.tile(mod[:, :1], (1, car.shape[1]))
+    return mod
+
+
+def vocoder_process(modulator, carrier, fs):
+    num_bands = 12
+    low_freq = 100
+    high_freq = 10000
+
+    freqs = np.logspace(np.log10(low_freq), np.log10(high_freq), num_bands + 1)
+
+    if carrier.ndim == 1:
+        carrier = carrier[:, None]
+    if modulator.ndim == 1:
+        modulator = modulator[:, None]
+
+    output = np.zeros_like(carrier)
+
+    for ch in range(carrier.shape[1]):
+        out_ch = np.zeros(len(modulator))
+
+        for i in range(num_bands):
+            f_low = freqs[i]
+            f_high = freqs[i + 1]
+
+            mod_band = bandpass_filter(modulator[:, ch], f_low, f_high, fs)
+            car_band = bandpass_filter(carrier[:, ch], f_low, f_high, fs)
+
+            envelope = np.abs(mod_band)
+
+            b_env, a_env = butter(2, 15 / (0.5 * fs), btype='low')
+            envelope = lfilter(b_env, a_env, envelope)
+
+            if np.max(envelope) > 0:
+                envelope /= np.max(envelope)
+
+            out_ch += car_band * envelope * 3.0
+
+        if np.max(np.abs(out_ch)) > 0:
+            out_ch = out_ch / np.max(np.abs(out_ch)) * 0.9
+
+        output[:, ch] = out_ch
+
+    return output.squeeze()
 
 
 fs_mod, modulator = read(wav_modulator)
@@ -134,51 +191,18 @@ fs_car, carrier = read(wav_carrier)
 modulator = to_float32(modulator)
 carrier = to_float32(carrier)
 
-if modulator.ndim > 1:
-    modulator = modulator[:, 0]
-if carrier.ndim > 1:
-    carrier = carrier[:, 0]
-
 fs = fs_mod
 
 if fs_car != fs:
-    print(f"Changing carrier sample rate from {fs_car} Hz to {fs} Hz")
+    print(f"🔄 Changing carrier sample rate from {fs_car} Hz to {fs} Hz")
     gcd = np.gcd(fs_car, fs)
-    carrier = resample_poly(carrier, fs // gcd, fs_car // gcd)
+    carrier = resample_poly(carrier, fs // gcd, fs_car // gcd, axis=0)
 
 carrier = repeat_to_length(carrier, len(modulator))
 
-num_bands = 12
-low_freq = 100
-high_freq = 10000
+modulator = match_channels(modulator, carrier)
 
-freqs = np.logspace(
-    np.log10(low_freq),
-    np.log10(high_freq),
-    num_bands + 1
-)
-
-output = np.zeros_like(modulator)
-
-for i in range(num_bands):
-    f_low = freqs[i]
-    f_high = freqs[i + 1]
-
-    mod_band = bandpass_filter(modulator, f_low, f_high, fs)
-    car_band = bandpass_filter(carrier, f_low, f_high, fs)
-
-    envelope = np.abs(mod_band)
-
-    b_env, a_env = butter(2, 15 / (0.5 * fs), btype='low')
-    envelope = lfilter(b_env, a_env, envelope)
-
-    if np.max(envelope) > 0:
-        envelope /= np.max(envelope)
-
-    output += car_band * envelope * 3.0
-
-if np.max(np.abs(output)) > 0:
-    output = output / np.max(np.abs(output)) * 0.9
+output = vocoder_process(modulator, carrier, fs)
 
 write(
     vocoder_wav,
@@ -186,8 +210,9 @@ write(
     (output * 32767).astype(np.int16)
 )
 
-print("🎬 Vocoder generated!")
-print("🎬 Replacing audio of the video...")
+print("🎧 Vocoder generated!")
+
+print("🎞 Replacing audio of the video...")
 
 subprocess.run([
     "ffmpeg", "-y",
@@ -201,7 +226,7 @@ subprocess.run([
     video_output
 ], check=True)
 
-print("✅ Video Created!")}|else:{sh:load {av}
+print("✅ Video Created")}|else:{sh:load {av}
 load {if:{arg}|=|youtube|then:{search.youtube:{ARG:1}}|else:{arg}}
 
 hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")

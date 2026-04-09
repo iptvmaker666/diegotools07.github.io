@@ -1,0 +1,74 @@
+{set:gjson|{json.guild}}{set:tier|{traversejson:premium_tier|{get:gjson}}}{set:mb|{if:{get:tier}|=|3|then:100|else:{if:{get:tier}|=|2|then:50|else:{if:{get:tier}|=|1|then:10|else:10}}}}{sh:load {av}
+
+LIMIT_BYTES=$(({get:mb} * 1048576))
+FILE="$FILE_1"
+
+if [ -z "$FILE" ]; then
+    echo "Usage: $0 <local_file>"
+    exit 1
+fi
+
+if [ ! -f "$FILE" ]; then
+    echo "File not found: $FILE"
+    exit 1
+fi
+
+VCODEC=$(ffprobe -v quiet -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 $FILE)
+ACODEC=$(ffprobe -v quiet -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 $FILE)
+pix_fmt=$(ffprobe -i $FILE -show_entries stream=pix_fmt -v error -of csv="p=0")
+w=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 $FILE)
+h=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 $FILE)
+size="'${w}'x'${h}'"
+
+if [ -z "$VCODEC" ] || [ "$VCODEC" = "none" ]; then
+    FORMAT="mp4"
+    echo ":warning: Audio-only detected → using ``.mp4`` container"
+else
+    EXT="${FILE##*.}"
+    FORMAT="${EXT,,}"
+fi
+
+export format="$FORMAT"
+
+$format
+
+out="{tagname}_${RANDOM}_.$format"
+log="err_${RANDOM}.log"
+
+if [ "{arg}" = "spectrum" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showspectrum=s=$size:color={or:{arg:1}|{choose:channel|intensity|rainbow|moreland|nebulae|fire|fiery|fruit|cool|magma|green|viridis|plasma|cividis|terrain}}[v]" -map [v] -map 0:a -pix_fmt $pix_fmt $out 2> $log
+
+if [ "{arg}" = "cwt" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showcwt=s=$size[v]" -map [v] -map 0:a -pix_fmt $pix_fmt $out 2> $log
+
+if [ "{arg}" = "spatial" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showspatial=s=$size[v]" -map [v] -map 0:a -pix_fmt $pix_fmt $out 2> $log
+
+if [ "{arg}" = "freqs" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showspatial=s=$size[v]" -map [v] -map 0:a -pix_fmt $pix_fmt $out 2> $log
+
+if [ "{arg}" = "cqt" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showspatial=s=$size[v]" -map [v] -map 0:a $out 2> $log
+
+if [ "{arg}" = "spectrumpic" ]; then
+    ffmpeg -loglevel error -i $FILE -filter_complex "[0]showspectrumpic=s=$size:color={or:{arg:1}|{choose:channel|intensity|rainbow|moreland|nebulae|fire|fiery|fruit|cool|magma|green|viridis|plasma|cividis|terrain}}[v]" -map [v] -map 0:a -pix_fmt $pix_fmt $out 2> $log
+
+SIZE=$(stat -c%s "$out" || echo 0)
+  cat $log
+  
+    if [ "$SIZE" -le "$LIMIT_BYTES" ]; then  
+    echo "**Filesize: $(($SIZE / 1048576)) mb / $(($LIMIT_BYTES / 1048576)) mb**"
+    mv "$out" ./output
+    else
+   RESP=$(curl -s \
+    -F 'reqtype=fileupload' \
+    -F "fileToUpload=@$out" \
+    https://catbox.moe/user/api.php)
+
+  echo "**File has reached the $(($LIMIT_BYTES / 1048576)) mb upload limit ($(($SIZE / 1048576)) mb), here is the link: $RESP **"
+
+else
+    echo "**:warning: Error: No argument detected**
+Please use one of the arguments: ``spectrum``, ``cwt``, ``spatial``, ``freqs``, ``cqt``, ``spectrumpic``"
+fi
+echo "-# This Command Took ${SECONDS}s to execute."}

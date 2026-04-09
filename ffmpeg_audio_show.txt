@@ -66,6 +66,7 @@ SIZE=$(stat -c%s "$out" || echo 0)
     https://catbox.moe/user/api.php)
 
   echo "**File has reached the $(($LIMIT_BYTES / 1048576)) mb upload limit ($(($SIZE / 1048576)) mb), here is the link: $RESP **"
+fi
 
 else
     echo "**:warning: Error: No argument detected**

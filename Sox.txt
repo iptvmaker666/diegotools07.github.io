@@ -5,13 +5,13 @@
 convert # audio/mp3
 render #}
 
-log=$RANDOM.log
+log=err_${RANDOM}.log
 sox -q $FILE_1 ./output/{get:digits_1}_${RANDOM}_$(basename $FILE_1) {args:1} 2> $log
 cat $log}}|else:{if:{arg}|=|iscript|then:{eval:{sh:load {iscripturl:load {av} #
 convert # audio/mp3
 render #}
 
-log=$RANDOM.log
+log=err_${RANDOM}.log
 sox -q $FILE_1 ./output/{get:digits_1}_${RANDOM}_$(basename $FILE_1) {args:1} 2> $log
 cat $log}
 {mscriptmaybeurl:load {av} m
@@ -20,7 +20,7 @@ repeatduration a md
 audioputreplace m a true
 render m}}|else:{eval:{sh:load {av}
 d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
-log=$RANDOM.log
+log=err_${RANDOM}.log
 
 ffmpeg -loglevel error -y -i $FILE_1 -vn -f mp3 output_{get:digits_1}.mp3 2> $log
 sox output_{get:digits_1}.mp3 {get:digits_1}.mp3 {args} 2> $log

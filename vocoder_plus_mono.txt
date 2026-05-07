@@ -232,7 +232,7 @@ load {if:{arg}|=|youtube|then:{search.youtube:{ARG:1}}|else:{arg}}
 hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
 d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
 
-ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0:a]volume=0.05,highpass=1000,acrusher=bits=32:samples=1[mod];[1:a]aresample=176400,volume=0.5[carr];[mod][carr]anlms=out_mode=e:order=3200:mu=0.01:leakage=0.005:eps=0.05:precision=double[voc];[voc]volume=75,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16[a]" -map 0:v:? -map "[a]" -ar "$hz" -shortest ./output/$(basename $FILE_1) |& tee -a
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]volume=0.065,highpass=2250,acrusher=bits=32:samples=1[mod];[1]aresample=176400,volume=0.5[carr];[mod][carr]anlms=out_mode=e:order=3200:mu=0.01:leakage=0.005:eps=0.05:precision=double[voc];[voc]volume=75,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16[a]" -map 0:v:? -map "[a]" -ar "$hz" -shortest ./output/$(basename $FILE_1) |& tee -a
 cd output
 ls -d |& tee -a}}}}
 -# Vocoder Command Execution Took {math:({unix}-{get:u})/1000} Seconds.

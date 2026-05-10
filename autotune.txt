@@ -5,8 +5,7 @@ If you want to search YouTube videos type .t {tagname} youtube "Video title" and
 If you want to use iscript to process the file type ".t {tagname} alt (url)"
 -# Tag created by darryl_edits07. |else:{choose:Autotunebot in Notsobot? No way!|{mention:{randuser}} got blocked for banned content! /j|Your autism, sire.|# haha yes bot make the best ytp videos ever!|best revival ever|YouTube shorts has much brainrot|(â â§â â˝â âŚâ )|Your video is done}
 {if:{arg}|=|alt|then:{eval:{sh:load {or:{av}|{av:0}}
-load {if:{arg:1}|=|youtube|then:{search.youtube:{ARG:2}}|else:{arg:1}}
-
+load {if:{arg:1}|=|youtube|then:{search.youtube:{args:2}}|else:{or:{arg:1}|{lastattachment}}}
 set -e
 curl -sSL "https://github.com/GanerCodes/AutotuneBot/raw/refs/heads/main/autotune.exe" -o "autotune.exe"
 chmod +x "autotune.exe"
@@ -28,7 +27,7 @@ load FILE_1 a
 repeatduration a md
 audioputreplace m a true
 render m}}|else:{sh:load {or:{av}|{av:0}}
-load {if:{arg}|=|youtube|then:{search.youtube:{args:1}}|else:{arg}}
+load {if:{arg}|=|youtube|then:{search.youtube:{args:1}}|else:{or:{arg}|{lastattachment}}}
 load https://github.com/GanerCodes/AutotuneBot/raw/refs/heads/main/autotune.exe
 hz=$(ffprobe -i "$FILE_1" -show_entries stream=sample_rate -v error -of csv="p=0")
 duration=$(ffprobe -i "$FILE_1" -show_entries format=duration -v error -of csv="p=0")

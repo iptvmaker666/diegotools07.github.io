@@ -69,11 +69,9 @@ rate="$hz"
 
   fi
 
-  wine cmd &>/dev/null && wine "$FILE_3" -q -b 75 "$modulator" "$carrier" "$autotuned" \
-    2> $log || { echo ":warning: An error has occurred, exiting command! (Autotune error)"; exit 1; } 
-
-  ffmpeg -loglevel error -i "$FILE_1" -stream_loop -1 -i "$autotuned" -map 0:v? -map 1 -shortest "$out" \
-    2> $log || { echo ":warning: An error has occurred, exiting command! (Processing error)"; exit 1; } 
+  wine cmd &>/dev/null && wine "$FILE_3" -q -b 75 "$modulator" "$carrier" "$autotuned" && ffmpeg -loglevel error -i "$FILE_1" -stream_loop -1 -i "$autotuned" -map 0:v? -map 1 -shortest "$out" \
+    2> $log || { echo ":warning: An error has occurred, exiting command! (Autotune & merging error)"; exit 1; } 
+ 
 
   SIZE=$(stat -c%s "$out" || echo 0)
   cat $log

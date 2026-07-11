@@ -28,16 +28,15 @@ namecarrier="carrier_$RANDOM.bmp"
 namemodulator="modulator_$RANDOM.bmp"
 namevoc="vocoded_$RANDOM.bmp"
 final="final_$RANDOM.wav"
+log="err_$RANDOM.log"
 
-ffmpeg -loglevel error -stream_loop -1 -y -i $FILE_2 -ar $hz -t $d -bitexact -map_metadata -1 $carrier |& tee -a
-ffmpeg -loglevel error -y -i $FILE_1 -bitexact -map_metadata -1 $modulator |& tee -a 
-wine cmd &>/dev/null && wine $FILE_3 $carrier $namecarrier --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q |& tee -a 
-wine cmd &>/dev/null && wine $FILE_3 $modulator $namemodulator --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q |& tee -a 
-magick $namecarrier $namemodulator -compose bumpmap -composite $namevoc |& tee -a
-wine cmd &>/dev/null && wine $FILE_3 $namevoc $final -s --min-freq 30 -max 20000 --pps 100 -r $hz -f 16 -g 25 -q |& tee -a
-ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $final -af volume=2 -map 0:v:? -map 1 -shortest ./output/v3_$(basename $FILE_1) |& tee -a
-cd output
-ls -d |& tee -a}|else:{if:{arg}|=|v4|then:{py:load {av}
+ffmpeg -loglevel error -stream_loop -1 -y -i $FILE_2 -ar $hz -t $d -bitexact -map_metadata -1 $carrier 2> $log
+ffmpeg -loglevel error -y -i $FILE_1 -bitexact -map_metadata -1 $modulator 2> $log
+wine cmd &>/dev/null && wine $FILE_3 $carrier $namecarrier --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q 2> $log
+wine cmd &>/dev/null && wine $FILE_3 $modulator $namemodulator --min-freq 30 -max 20000 -b 30 -p 100 -g 25 -q 2> $log
+magick $namecarrier $namemodulator -compose bumpmap -composite $namevoc 2> $log
+wine cmd &>/dev/null && wine $FILE_3 $namevoc $final -s --min-freq 30 -max 20000 --pps 100 -r $hz -f 16 -g 25 -q && ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $final -af volume=2 -map 0:v:? -map 1 -shortest ./output/v3_$(basename $FILE_1) 2> $log
+cat $log}|else:{if:{arg}|=|v4|then:{py:load {av}
 load {if:{arg:1}|=|youtube|then:{search.youtube:{arg:2}}|else:{arg:1}}
 
 import numpy as np
@@ -229,10 +228,10 @@ subprocess.run([
 print("✅ Video Created")}|else:{sh:load {av}
 load {if:{arg}|=|youtube|then:{search.youtube:{ARG:1}}|else:{arg}}
 
+log="err_$RANDOM.log"
 hz=$(ffprobe -i $FILE_1 -show_entries stream=sample_rate -v error -of csv="p=0")
 d=$(ffprobe -i $FILE_1 -show_entries format=duration -v error -of csv="p=0")
 
-ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]volume=0.065,highpass=2250,acrusher=bits=32:samples=1[mod];[1]aresample=176400,volume=0.5[carr];[mod][carr]anlms=out_mode=e:order=3200:mu=0.01:leakage=0.005:eps=0.05:precision=double[voc];[voc]volume=75,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16[a]" -map 0:v:? -map "[a]" -ar "$hz" -shortest ./output/$(basename $FILE_1) |& tee -a
-cd output
-ls -d |& tee -a}}}}
+ffmpeg -loglevel error -i $FILE_1 -stream_loop -1 -i $FILE_2 -filter_complex "[0]volume=0.075,highpass=1650,acrusher=bits=32:samples=1:mix=1[mod];[1]aresample=176400,volume=0.5[carr];[mod][carr]anlms=out_mode=e:order=2048:mu=0.005:leakage=0.015:eps=0.15:precision=double[voc];[voc]acontrast=100,volume=50,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16,aphaseshift=shift=1:order=16[a]" -map 0:v:? -map "[a]" -ar "$hz" -shortest ./output/$(basename $FILE_1) 2> $log
+cat $log}}}}
 -# Vocoder Command Execution Took {math:({unix}-{get:u})/1000} Seconds.

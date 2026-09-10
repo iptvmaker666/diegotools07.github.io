@@ -1,4 +1,4 @@
-{set:gjson|{json.guild}}{set:tier|{traversejson:premium_tier|{get:gjson}}}{set:mb|{if:{get:tier}|=|3|then:100|else:{if:{get:tier}|=|2|then:50|else:{if:{get:tier}|=|1|then:10|else:10}}}}{set:bytes|{math:{get:mb}*1048576}}{if:{arg}|=|help|then:# WELCOME TO AUTOTUNE BOT NSB VERSION!
+{set:gjson|{json.guild}}{set:tier|{traversejson:premium_tier|{get:gjson}}}{set:mb|{if:{get:tier}|=|3|then:100|else:{if:{get:tier}|=|2|then:50|else:{if:{get:tier}|=|1|then:20|else:20}}}}{set:bytes|{math:{get:mb}*1048576}}{if:{arg}|=|help|then:# WELCOME TO AUTOTUNE BOT NSB VERSION!
 How to use it: 
 .t {tagname} (url)
 If you want to search YouTube videos type .t {tagname} youtube "Video title" and the video url will be automatically returned to be loaded.

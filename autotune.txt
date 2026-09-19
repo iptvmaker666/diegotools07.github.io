@@ -24,7 +24,7 @@ if [ ! -f "$FILE2" ]; then
 fi
 
 if file --mime-type -b "$FILE2" | grep -q "^image/"; then
-    echo "The detected file is invalid (image): $FILE2"
+    echo "** :warning: The detected file is invalid (image): $FILE2 **"
     echo "Exiting script..."
     exit 0          
 fi
@@ -61,7 +61,7 @@ if [ ! -f "$FILE2" ]; then
 fi
 
 if file --mime-type -b "$FILE2" | grep -q "^image/"; then
-    echo "The detected file is invalid (image): $FILE2"
+    echo "** :warning: The detected file is invalid (image): $FILE2 **"
     echo "Exiting script..."
     exit 0          
 fi

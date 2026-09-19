@@ -16,9 +16,21 @@ carrier="carrier_$RANDOM.wav"
 modulator="index_$RANDOM.wav"
 autotuned="at_$RANDOM.wav"
 SECONDS=0
+FILE2="$FILE_2"
+
+if [ ! -f "$FILE2" ]; then
+    echo ":warning: Error: The file '$FILE2' does not exist."
+    exit 1
+fi
+
+if file --mime-type -b "$FILE2" | grep -q "^image/"; then
+    echo "Image detected: $FILE2"
+    echo "Exiting script..."
+    exit 0          
+fi
 
 ffmpeg -loglevel error -i $FILE_1 -vn -ac 1 -f wav $modulator || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; }
-ffmpeg -loglevel error -stream_loop -1 -i $FILE_2 -vn -ac 1 -ar "$hz" -t $duration -f wav $carrier || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; }
+ffmpeg -loglevel error -stream_loop -1 -i $FILE2 -vn -ac 1 -ar "$hz" -t $duration -f wav $carrier || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; }
 wine cmd &>/dev/null && wine autotune.exe -q -b 75 $modulator $carrier ./output/$autotuned || { echo ":warning: An error has occurred, exiting command! (Autotune error)"; exit 1; }
 cd output
 ls -lh |& tee -a
@@ -41,13 +53,26 @@ mkdir "$dir"
 out="a_${RANDOM}_$(basename $FILE_1)"
 LIMIT_BYTES={get:bytes}
 rate="$hz"
+FILE2="$FILE_2"
+
+if [ ! -f "$FILE2" ]; then
+    echo ":warning: Error: The file '$FILE2' does not exist."
+    exit 1
+fi
+
+if file --mime-type -b "$FILE2" | grep -q "^image/"; then
+    echo "Image detected: $FILE2"
+    echo "Exiting script..."
+    exit 0          
+fi
+
 
   if (( rate == 48000 )); then
 
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -f wav "$modulator" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
-    ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
+    ffmpeg -loglevel error -stream_loop -1 -i "$FILE2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   elif (( rate > 48000 )); then
@@ -55,7 +80,7 @@ rate="$hz"
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -ar 48000 -f wav "$modulator" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
-    ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar 48000 -t "$duration" -f wav "$carrier" \
+    ffmpeg -loglevel error -stream_loop -1 -i "$FILE2" -vn -ac 1 -ar 48000 -t "$duration" -f wav "$carrier" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   else # rate < 48000
@@ -63,7 +88,7 @@ rate="$hz"
     ffmpeg -loglevel error -i "$FILE_1" -vn -ac 1 -f wav "$modulator" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Modulator error)"; exit 1; } 
 
-    ffmpeg -loglevel error -stream_loop -1 -i "$FILE_2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
+    ffmpeg -loglevel error -stream_loop -1 -i "$FILE2" -vn -ac 1 -ar "$hz" -t "$duration" -f wav "$carrier" \
       2> $log || { echo ":warning: An error has occurred, exiting command! (Carrier error)"; exit 1; } 
 
   fi
